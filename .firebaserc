@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "resp-ai"
+    "default": "demo-resp-ai",
+    "ricardo": "resp-ai"
   }
 }

@@ -1,7 +1,7 @@
 import type {Request} from "firebase-functions/https";
 import type {Response} from "express";
 import * as logger from "firebase-functions/logger";
-import {getFirestore} from "firebase-admin/firestore";
+import {getDb} from "../firestoreDb";
 
 const ALLOWLIST_COLLECTION = "config";
 const ALLOWLIST_DOCUMENT = "ipAllowlist";
@@ -50,7 +50,7 @@ const loadAllowlist = async (): Promise<AllowlistCache> => {
   let enabled: boolean;
 
   try {
-    const snapshot = await getFirestore()
+    const snapshot = await getDb()
       .collection(ALLOWLIST_COLLECTION)
       .doc(ALLOWLIST_DOCUMENT)
       .get();
@@ -99,6 +99,8 @@ const resolveClientIp = (req: Request): string => {
  * presente en la allowlist configurada en Firestore antes de
  * ejecutarlo. Si la IP no está autorizada responde 403 y no invoca
  * el handler original.
+ * @param {RequestHandler} handler Handler original a proteger.
+ * @return {RequestHandler} Handler envuelto con el chequeo de IP.
  */
 export const withIpAllowlist = (handler: RequestHandler): RequestHandler => {
   return async (req, res) => {

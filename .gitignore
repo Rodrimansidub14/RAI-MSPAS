@@ -1,2 +1,9 @@
-functions/.env
+functions/.env*
+!functions/.env.example
 .env
+
+# Logs generados al correr los emuladores localmente
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
