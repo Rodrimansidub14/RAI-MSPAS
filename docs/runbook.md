@@ -113,6 +113,14 @@ npm run serve
 Esto compila y levanta `functions` y `firestore` en local. UI del
 emulador: `http://127.0.0.1:4000`.
 
+Al arrancar, si `config/ipAllowlist` todavía no existe, la propia
+función lo siembra sola con `127.0.0.1` y `::1` (código en
+`functions/src/devSeed.ts`). No hace falta entrar a la UI del
+emulador ni correr ningún curl aparte para el caso básico: apenas
+levanta el emulador, ya se puede probar `directorio` o `buscarMedicos`
+con esas IPs. Esto solo corre bajo el emulador (detecta la variable
+`FUNCTIONS_EMULATOR` que pone Firebase), nunca en producción.
+
 ### 2.0 Verificar el allowlist con un solo comando (recomendado)
 
 No hace falta levantar nada a mano ni sembrar datos manualmente para
@@ -145,16 +153,15 @@ un exit code distinto de 0. Se puede correr después de cualquier
 cambio relacionado con el allowlist, sin depender de que alguien haya
 sembrado datos a mano de antemano.
 
-### 2.1 Crear la allowlist de IPs a mano (para explorar o debuggear)
+### 2.1 Agregar o cambiar IPs a mano (opcional)
 
-El comando de la sección 2.0 ya prueba el allowlist de punta a punta.
-Lo de acá sirve para cuando alguien quiera dejar el emulador corriendo
-y explorar manualmente (por ejemplo probar `buscarMedicos` con su
-propia key, o ver datos en la UI).
+Con `npm run serve`, `127.0.0.1` y `::1` ya quedan autorizadas solas
+(ver sección 2). Esto es solo para cuando alguien necesita algo
+distinto: agregar otra IP, probar con `enabled: false`, o simplemente
+ver/editar el documento a mano.
 
 El middleware (`functions/src/middleware/ipAllowlist.ts`) lee el
-documento `config/ipAllowlist` de Firestore. Ese documento no existe
-por defecto: sin él, todas las requests dan 403. Para crearlo en el
+documento `config/ipAllowlist` de Firestore. Para editarlo en el
 emulador:
 
 - Abrir `http://127.0.0.1:4000/firestore`.
@@ -196,6 +203,30 @@ curl -i -H "X-Forwarded-For: 127.0.0.1" \
 curl -i -H "X-Forwarded-For: 9.9.9.9" \
   "http://127.0.0.1:5001/<project-id>/us-central1/directorio"
 ```
+
+Si están en PowerShell normal (no Git Bash ni WSL), `curl` ahí es un
+alias de `Invoke-WebRequest`, que no entiende el formato `-H "Header:
+valor"` como texto y tira un error de tipo. Dos formas de evitarlo:
+
+```powershell
+# Usando el curl real que también trae Windows, sin pasar por el alias
+curl.exe -H "X-Forwarded-For: 127.0.0.1" "http://127.0.0.1:5001/<project-id>/us-central1/directorio"
+
+# O la forma nativa de PowerShell
+Invoke-WebRequest -Uri "http://127.0.0.1:5001/<project-id>/us-central1/directorio" -Headers @{"X-Forwarded-For"="127.0.0.1"}
+```
+
+Para `buscarMedicos` es el mismo header, con `keyword` y `zona` como
+parámetros en la URL:
+
+```powershell
+curl.exe -H "X-Forwarded-For: 127.0.0.1" "http://127.0.0.1:5001/<project-id>/us-central1/buscarMedicos?keyword=cardiologo&zona=zona10"
+```
+
+Aunque se pruebe contra el emulador, esta sí llama a la Places API real
+por internet (no hay emulador de Google Places) y sí tiene costo, así
+que no conviene correrla en loop, con una vez alcanza para confirmar
+que funciona.
 
 ## 3. Antes de cualquier deploy real
 
@@ -260,10 +291,10 @@ Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
   ```
   Esta sí llama a la Places API real y tiene costo (aprox. $0.017 por
   llamada). No conviene probarla en loop, una vez alcanza para
-  confirmar que el deploy funciona. Si además cuenta como una búsqueda
-  real para poblar el directorio, definir antes la estrategia de
-  keywords como equipo (pedido en la Semana 2), no improvisar el
-  primer `keyword`/`zona` que se le ocurra a quien esté probando.
+  confirmar que el deploy funciona. Para poblar el directorio de
+  verdad, seguir el plan de `docs/estrategia-keywords.md`, no
+  improvisar el `keyword`/`zona` que se le ocurra a quien esté
+  probando.
   La respuesta no trae la lista de médicos, solo un resumen
   (`{"mensaje": "...", "total": N}`); los datos se revisan llamando de
   nuevo a `directorio`, o directo en la consola de Firestore, colección
@@ -297,6 +328,12 @@ Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
   obtener el cliente de Firestore, no `getFirestore()` directo, así
   todo el código apunta a la base `directorio-medicos-db` de forma
   consistente.
+- `functions/src/devSeed.ts` siembra la allowlist de desarrollo
+  (`127.0.0.1`, `::1`) solo bajo el emulador (revisa
+  `FUNCTIONS_EMULATOR`). Cualquier lógica que dependa de datos de
+  ejemplo para desarrollo local debe seguir ese mismo patrón: nunca
+  correr fuera del emulador, nunca en `index.ts` directo, en su propio
+  módulo.
 
 ## 5. Estado del checklist
 
@@ -305,9 +342,7 @@ Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
 - [x] Cuota máxima diaria de Places API, evidencia en `chuy_evidence/`
 - [x] Middleware de IP whitelist implementado, con smoke test
       reproducible (`npm run test:allowlist`, ver sección 2.0)
-- [ ] Función "hello world" o funciones actuales desplegadas a un
+- [X] Función "hello world" o funciones actuales desplegadas a un
       proyecto real (pendiente, ver sección 3 antes de intentarlo)
-- [ ] `config/ipAllowlist` creado en un proyecto real, no solo probado
+- [X] `config/ipAllowlist` creado en un proyecto real, no solo probado
       en el emulador
-- [ ] Cada integrante completa su propio setup (sección 1) si decide
-      tener su proyecto personal

@@ -12,6 +12,8 @@ Todos los pasos de setup, cómo correr el emulador local, cómo probar el allowl
 
 Para arrancar rápido sin tener todavía una cuenta propia de GCP, ver la sección 1.0 del runbook (modo `demo`, sin login ni proyecto real).
 
+El diagrama de arquitectura está en [`docs/arquitectura.md`](docs/arquitectura.md), y la propuesta de especialidades y zonas para poblar el directorio en [`docs/estrategia-keywords.md`](docs/estrategia-keywords.md).
+
 ## Stack
 
 TypeScript, Firebase Functions v2, Firestore, Google Places API, Firebase Hosting para la UI. Desarrollo local con el emulador de Firebase; producción solo para pruebas finales y la demo.

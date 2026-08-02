@@ -6,11 +6,14 @@ import {FieldValue} from "firebase-admin/firestore";
 import axios from "axios";
 import {withIpAllowlist} from "./middleware/ipAllowlist";
 import {getDb} from "./firestoreDb";
+import {seedDevAllowlistIfMissing} from "./devSeed";
 
 initializeApp();
 const db = getDb();
 
 setGlobalOptions({maxInstances: 10});
+
+seedDevAllowlistIfMissing();
 
 // Función 1: Buscar médicos en Places API y guardar en Firestore
 export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
@@ -32,6 +35,7 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
         headers: {
           "X-Goog-Api-Key": apiKey,
           "X-Goog-FieldMask": [
+            "places.id",
             "places.displayName",
             "places.formattedAddress",
             "places.nationalPhoneNumber",
@@ -45,24 +49,33 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
     const places = response.data.places || [];
 
     const batch = db.batch();
+    let guardados = 0;
     places.forEach((place: any) => {
-      const ref = db.collection("medicos").doc();
+      if (!place.id) {
+        logger.warn("Resultado de Places sin place_id, se omite", {query});
+        return;
+      }
+
+      const ref = db.collection("medicos").doc(place.id);
       batch.set(ref, {
         nombre: place.displayName?.text || "",
         direccion: place.formattedAddress || "",
         telefono: place.nationalPhoneNumber || "",
-        sitioWeb: place.websiteUri || "",
+        sitio_web: place.websiteUri || "",
         especialidad: keyword,
         zona: zona,
-        creadoEn: FieldValue.serverTimestamp(),
+        place_id: place.id,
+        keyword_usado: query,
+        fecha_recoleccion: FieldValue.serverTimestamp(),
       });
+      guardados++;
     });
 
     await batch.commit();
 
     res.json({
-      mensaje: `${places.length} médicos guardados en Firestore`,
-      total: places.length,
+      mensaje: `${guardados} médicos guardados en Firestore`,
+      total: guardados,
     });
   } catch (error) {
     logger.error("Error buscando médicos", error);
