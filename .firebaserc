@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "demo-resp-ai",
+    "ricardo": "resp-ai"
+  }
+}
