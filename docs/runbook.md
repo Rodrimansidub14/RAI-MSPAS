@@ -1,4 +1,4 @@
-# Runbook — Directorio de Médicos Especialistas
+# Runbook: Directorio de Médicos Especialistas
 
 Guía operativa para el equipo: qué hacer para tener el proyecto
 corriendo, qué configurar en su propio GCP, y cómo probar antes de
@@ -213,10 +213,80 @@ curl -i -H "X-Forwarded-For: 9.9.9.9" \
   desarrollo del día a día. Así lo pide el enunciado, y además cada
   deploy a producción tiene costo real.
 
+### 3.1 Crear el allowlist en el proyecto real, antes de desplegar
+
+Igual que en el emulador, pero en la consola real de Firebase
+(console.firebase.google.com), no en la UI del emulador:
+
+1. Conseguir la IP pública real de quien va a probar, con
+   `curl ifconfig.me` o cualquier página de "what is my ip".
+2. Entrar a Firestore Database en la consola, y antes de crear nada
+   confirmar en el selector de bases que se está viendo
+   `directorio-medicos-db`, no `(default)`. Si se crea el documento en
+   la base equivocada, el código nunca lo va a encontrar.
+3. Pestaña Data, "Start collection", collection ID `config`, Next.
+4. Document ID exacto `ipAllowlist` (mayúscula en la "A").
+5. Agregar campo `ips`, tipo array, con la IP pública como string.
+6. Agregar campo `enabled`, tipo boolean, valor `true`.
+7. Guardar.
+
+### 3.2 Deploy y verificación
+
+```
+firebase use
+firebase deploy --only functions,firestore:rules,firestore:indexes
+```
+
+`firebase use` sin argumentos debe confirmar el proyecto correcto antes
+de seguir. El deploy corre desde la raíz de `RAI-MSPAS` (donde está
+`firebase.json`), no desde `functions/`.
+
+La primera vez que se despliega una función v2 en un proyecto, el CLI
+puede preguntar cuántos días conservar las imágenes de contenedor antes
+de borrarlas (Artifact Registry). Aceptar el valor por defecto (1 día)
+es suficiente, es solo para no acumular storage de builds viejos y no
+hay necesidad de volver a una imagen anterior.
+
+Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
+
+- `directorio` es un GET simple, se puede pegar la URL directo en el
+  navegador. Con la IP ya en la allowlist, responde algo como
+  `{"page":1,"pageSize":10,"total":0,"data":[]}`, sin necesidad de
+  curl ni headers a mano (eso era solo para el emulador).
+- `buscarMedicos` necesita los parámetros `keyword` y `zona` en la
+  URL, por ejemplo:
+  ```
+  https://us-central1-<project-id>.cloudfunctions.net/buscarMedicos?keyword=cardiologo&zona=zona10
+  ```
+  Esta sí llama a la Places API real y tiene costo (aprox. $0.017 por
+  llamada). No conviene probarla en loop, una vez alcanza para
+  confirmar que el deploy funciona. Si además cuenta como una búsqueda
+  real para poblar el directorio, definir antes la estrategia de
+  keywords como equipo (pedido en la Semana 2), no improvisar el
+  primer `keyword`/`zona` que se le ocurra a quien esté probando.
+  La respuesta no trae la lista de médicos, solo un resumen
+  (`{"mensaje": "...", "total": N}`); los datos se revisan llamando de
+  nuevo a `directorio`, o directo en la consola de Firestore, colección
+  `medicos`.
+
 ## 4. Convenciones del repo
 
 - La API key de Places nunca va en código, solo en `functions/.env` (o
   `functions/.env.<project-id>` para overrides por proyecto).
+- La API key se restringe por API (solo "Places API (New)"), no por IP,
+  aunque la consola de GCP sí ofrece un campo de "IP addresses" en
+  Application restrictions. Ese campo funciona solo si hay una IP fija
+  que poner ahí, y Cloud Functions Gen2 no tiene una IP de salida fija
+  por defecto: cada llamada a Places API puede salir por una IP
+  distinta de un pool compartido con otros clientes de Google, no
+  propia del proyecto. Poner la IP de una persona del equipo ahí no
+  funciona, porque esa nunca es la IP que Google ve llegar de verdad.
+  Para tener una IP de salida fija haría falta un Serverless VPC
+  Connector más Cloud NAT, con costo aparte (unos 40 a 50 dólares
+  mensuales como mínimo), que no se justifica para el alcance de este
+  proyecto. Esta es una decisión de alcance tomada conscientemente, no
+  un pendiente. Documentarla también en la sección de seguridad de la
+  entrega de Semana 4.
 - La allowlist de IPs vive en Firestore (`config/ipAllowlist`), no en
   el código. La variable de entorno `IPS_AUTORIZADAS` (CSV) es solo un
   respaldo si ese documento no existe.
@@ -228,7 +298,7 @@ curl -i -H "X-Forwarded-For: 9.9.9.9" \
   todo el código apunta a la base `directorio-medicos-db` de forma
   consistente.
 
-## 5. Estado — checklist
+## 5. Estado del checklist
 
 - [x] Proyecto Firebase/GCP configurado
 - [x] Alertas de billing (50%/90%), evidencia en `chuy_evidence/`
