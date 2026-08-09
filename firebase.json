@@ -23,6 +23,31 @@
       ]
     }
   ],
+  "hosting": {
+    "public": "web/dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "predeploy": [
+      "npm --prefix web run lint",
+      "npm --prefix web run build"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/directorio",
+        "function": {
+          "functionId": "directorio",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "emulators": {
     "functions": {
       "port": 5001
