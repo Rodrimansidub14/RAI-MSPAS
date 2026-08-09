@@ -1,6 +1,9 @@
 {
   "projects": {
     "default": "demo-resp-ai",
-    "ricardo": "resp-ai"
-  }
+    "ricardo": "resp-ai",
+    "sergio-directory": "directorio-medicos-sergio"
+  },
+  "targets": {},
+  "etags": {}
 }

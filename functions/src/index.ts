@@ -7,7 +7,19 @@ import axios from "axios";
 import {withIpAllowlist} from "./middleware/ipAllowlist";
 import {getDb} from "./firestoreDb";
 import {seedDevAllowlistIfMissing} from "./devSeed";
+import {
+  INITIAL_MEDICAL_PLACE_IDS,
+  PLACE_DETAILS_FIELD_MASK,
+  PlaceDetails,
+  toMedicalPlaceFields,
+} from "./medicalPlaceData";
 
+const TEXT_SEARCH_FIELD_MASK = PLACE_DETAILS_FIELD_MASK
+  .split(",")
+  .map((field) => `places.${field}`)
+  .join(",");
+const INITIAL_MIGRATION_CONFIRMATION = "actualizar-40";
+const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places";
 initializeApp();
 const db = getDb();
 
@@ -28,20 +40,13 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
     const apiKey = process.env.PLACES_API_KEY;
     const query = `${keyword} ${zona} Ciudad de Guatemala`;
 
-    const response = await axios.post(
+    const response = await axios.post<{places?: PlaceDetails[]}>(
       "https://places.googleapis.com/v1/places:searchText",
       {textQuery: query, pageSize: 20},
       {
         headers: {
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": [
-            "places.id",
-            "places.displayName",
-            "places.formattedAddress",
-            "places.nationalPhoneNumber",
-            "places.websiteUri",
-            "places.types",
-          ].join(","),
+          "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
         },
       }
     );
@@ -50,7 +55,7 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
 
     const batch = db.batch();
     let guardados = 0;
-    places.forEach((place: any) => {
+    places.forEach((place) => {
       if (!place.id) {
         logger.warn("Resultado de Places sin place_id, se omite", {query});
         return;
@@ -58,10 +63,7 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
 
       const ref = db.collection("medicos").doc(place.id);
       batch.set(ref, {
-        nombre: place.displayName?.text || "",
-        direccion: place.formattedAddress || "",
-        telefono: place.nationalPhoneNumber || "",
-        sitio_web: place.websiteUri || "",
+        ...toMedicalPlaceFields(place),
         especialidad: keyword,
         zona: zona,
         place_id: place.id,
@@ -109,3 +111,75 @@ export const directorio = onRequest(withIpAllowlist(async (req, res) => {
     res.status(500).json({error: "Error al consultar el directorio"});
   }
 }));
+/**
+ * Migración temporal para enriquecer los 40 médicos iniciales del proyecto.
+ * Solo actualiza documentos existentes; no crea médicos nuevos.
+ */
+export const actualizarMedicosIniciales = onRequest(
+  {timeoutSeconds: 300},
+  withIpAllowlist(async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({error: "Usa POST para esta migración"});
+      return;
+    }
+
+    if (req.query.confirmar !== INITIAL_MIGRATION_CONFIRMATION) {
+      res.status(400).json({
+        error: "Confirma la migración con ?confirmar=actualizar-40",
+      });
+      return;
+    }
+
+    const apiKey = process.env.PLACES_API_KEY;
+    if (!apiKey) {
+      logger.error("PLACES_API_KEY no está configurada");
+      res.status(500).json({error: "Falta configuración de Places API"});
+      return;
+    }
+
+    const batch = db.batch();
+    const noEncontrados: string[] = [];
+    const errores: string[] = [];
+    let actualizados = 0;
+
+    for (const placeId of INITIAL_MEDICAL_PLACE_IDS) {
+      const ref = db.collection("medicos").doc(placeId);
+      const snapshot = await ref.get();
+
+      if (!snapshot.exists) {
+        noEncontrados.push(placeId);
+        continue;
+      }
+
+      try {
+        const response = await axios.get<PlaceDetails>(
+          `${PLACE_DETAILS_URL}/${encodeURIComponent(placeId)}`,
+          {
+            headers: {
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": PLACE_DETAILS_FIELD_MASK,
+            },
+          }
+        );
+
+        batch.set(ref, toMedicalPlaceFields(response.data), {merge: true});
+        actualizados++;
+      } catch (error) {
+        logger.error("Error actualizando médico inicial", {placeId, error});
+        errores.push(placeId);
+      }
+    }
+
+    if (actualizados > 0) {
+      await batch.commit();
+    }
+
+    res.json({
+      mensaje: "Migración inicial completada",
+      total_configurados: INITIAL_MEDICAL_PLACE_IDS.length,
+      actualizados,
+      no_encontrados: noEncontrados,
+      errores,
+    });
+  })
+);
