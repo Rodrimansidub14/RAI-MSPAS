@@ -1,6 +1,6 @@
 # RAI-MSPAS
 
-Directorio de Médicos Especialistas para el Ministerio de Educación de Guatemala. Proyecto del curso CC3106 Responsible AI, UVG.
+Directorio de Médicos Especialistas para el Ministerio de Educación de Guatemala. Proyecto del curso CC3106 Responsible AI, UVG
 
 ## Qué hace
 
