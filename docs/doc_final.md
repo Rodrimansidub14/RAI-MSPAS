@@ -55,21 +55,17 @@ También configuramos alertas de presupuesto y cuotas diarias de Places API. Tra
 
 ## 6. Evidencia de implementación
 
-La Function y el backend fueron desplegados en `us-central1` y la interfaz se publicó con Firebase Hosting. Las siguientes capturas respaldan el estado del proyecto.
+Las Functions y el backend fueron desplegados en `us-central1` y la interfaz se publicó con Firebase Hosting. Cada integrante mantiene su propio proyecto de GCP, por lo que existe un despliegue independiente por persona.
 
-<img src="../evidences/sergio_evidence/SERGIO_FUNCTIONS.png" alt="Functions desplegadas" width="520" />
-
-<img src="../evidences/sergio_evidence/SERGIO_FIRESTONE_DATA_REAL.png" alt="Datos reales almacenados en Firestore" width="520" />
-
-<img src="../evidences/sergio_evidence/SERGIO_WEB.png" alt="UI publicada en Firebase Hosting" width="520" />
-
-Las evidencias complementarias de presupuesto, cuota, Hosting y prueba desde otra IP se encuentran en `evidences/sergio_evidence/`.
+Las capturas que respaldan cada requisito del enunciado (alertas de billing, cuota diaria de Places, Functions desplegadas, rechazo 403 de la allowlist, datos reales en Firestore y UI publicada) están recopiladas en [`evidencias.md`](evidencias.md), organizadas por requisito y por integrante. Los archivos originales viven en `evidences/`.
 
 ## 7. Estrategia de datos y calidad
 
-Nosotros documentamos la campaña de recolección en `docs/estrategia-keywords.md`: propone diez especialidades y ocho zonas de Ciudad de Guatemala, para un máximo de 80 combinaciones. Antes de la campaña completa se ejecuta un piloto de cuatro consultas y se revisa relevancia, formato de campos y coincidencias entre búsquedas. Las variantes de nomenclatura se registran porque Google Maps no usa una taxonomía médica uniforme.
+Nosotros documentamos la campaña de recolección en `docs/estrategia-keywords.md`. El alcance definido es de dos especialidades en dos zonas de Ciudad de Guatemala, cuatro combinaciones en total, que producen más de cincuenta registros únicos.
 
-La trazabilidad se conserva con `fuente`, `keyword_usado`, `fecha_recoleccion` y `actualizado_en`. Los valores ausentes no se infieren: teléfono, sitio web, horario o ubicación pueden quedar vacíos cuando Places no los proporciona.
+Ese alcance es una decisión deliberada y no un plan incompleto. Una propuesta inicial más amplia habría generado del orden de ochocientos a mil doscientos registros, un volumen que vuelve imposible la revisión manual de relevancia que pide el enunciado, contradice el control de costo que el propio proyecto establece con cuotas y alertas, y excede por mucho lo que la interfaz puede mostrar. Preferimos un conjunto acotado y revisado sobre uno extenso y sin verificar. El sistema acepta cualquier combinación sin cambios de código, por lo que ampliar la cobertura es una decisión operativa y no un desarrollo pendiente.
+
+La trazabilidad se conserva con `fuente`, `keyword_usado`, `fecha_recoleccion` y `actualizado_en`. Los valores ausentes no se infieren: teléfono, sitio web, horario o ubicación pueden quedar vacíos cuando Places no los proporciona. La revisión del conjunto recolectado dejó hallazgos documentados en la estrategia: resultados fuera de Ciudad de Guatemala, un campo `zona` que refleja el parámetro de búsqueda y no la dirección verificada, especialidades cruzadas por la nomenclatura inconsistente de Google Maps, y sitios web que apuntan a redes sociales o directorios externos en lugar de a una clínica. Ninguno de esos casos se corrigió ni se rellenó.
 
 ## 8. Postura ética y límites
 
@@ -94,6 +90,7 @@ Para publicar un cambio visual desde la raíz del repositorio se ejecuta `fireba
 - [Arquitectura detallada](arquitectura.md)
 - [Estrategia de keywords](estrategia-keywords.md)
 - [UI, contrato de datos y Hosting](ui-directorio.md)
+- [Evidencias de implementación](evidencias.md)
 
 ### Documentación oficial
 

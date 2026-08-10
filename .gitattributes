@@ -1,0 +1,13 @@
+# Normaliza los finales de linea a LF en todas las copias de trabajo.
+# Sin esto, en Windows git convierte a CRLF al hacer checkout (core.autocrlf)
+# y la regla linebreak-style de ESLint falla, lo que rompe el hook predeploy
+# de firebase.json y bloquea el deploy.
+* text=auto eol=lf
+
+# Binarios: git no debe tocarlos.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
