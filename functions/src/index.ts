@@ -6,7 +6,6 @@ import {FieldValue} from "firebase-admin/firestore";
 import axios from "axios";
 import {withIpAllowlist} from "./middleware/ipAllowlist";
 import {getDb} from "./firestoreDb";
-import {seedDevAllowlistIfMissing} from "./devSeed";
 import {
   INITIAL_MEDICAL_PLACE_IDS,
   PLACE_DETAILS_FIELD_MASK,
@@ -25,7 +24,6 @@ const db = getDb();
 
 setGlobalOptions({maxInstances: 10});
 
-seedDevAllowlistIfMissing();
 
 // Función 1: Buscar médicos en Places API y guardar en Firestore
 export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {

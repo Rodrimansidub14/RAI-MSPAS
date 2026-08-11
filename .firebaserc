@@ -2,7 +2,8 @@
   "projects": {
     "default": "demo-resp-ai",
     "ricardo": "resp-ai",
-    "sergio-directory": "directorio-medicos-sergio"
+    "sergio-directory": "directorio-medicos-sergio",
+    "rodrigo": "project-312d82e4-6f8b-42cf-824"
   },
   "targets": {},
   "etags": {}

@@ -12,7 +12,7 @@
     "test:allowlist": "npm run build && firebase emulators:exec --only functions,firestore \"node lib/scripts/testAllowlist.js\""
   },
   "engines": {
-    "node": "24"
+    "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {

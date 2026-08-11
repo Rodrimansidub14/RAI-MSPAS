@@ -27,6 +27,8 @@ module.exports = {
   ],
   rules: {
     "quotes": ["error", "double"],
+    // El código se desarrolla también en Windows; no forzar un EOL específico.
+    "linebreak-style": "off",
     "import/no-unresolved": 0,
     "indent": ["error", 2],
   },

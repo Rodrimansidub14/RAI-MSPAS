@@ -1,6 +1,7 @@
 import type {Request} from "firebase-functions/https";
 import type {Response} from "express";
 import * as logger from "firebase-functions/logger";
+import {seedDevAllowlistIfMissing} from "../devSeed";
 import {getDb} from "../firestoreDb";
 
 const ALLOWLIST_COLLECTION = "config";
@@ -104,6 +105,7 @@ const resolveClientIp = (req: Request): string => {
  */
 export const withIpAllowlist = (handler: RequestHandler): RequestHandler => {
   return async (req, res) => {
+    await seedDevAllowlistIfMissing();
     const {ips, enabled} = await loadAllowlist();
 
     if (enabled) {
