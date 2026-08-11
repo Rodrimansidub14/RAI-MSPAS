@@ -19,7 +19,7 @@ Este alcance es una decisión deliberada del equipo, no un plan incompleto. Las 
 
 **Coherencia con el control de costo del proyecto.** El proyecto define alertas de presupuesto, cuota diaria de Places y desarrollo local con emuladores precisamente para no gastar sin criterio. Recolectar cientos de registros que nadie va a revisar ni mostrar contradice ese mismo principio.
 
-**Capacidad real de la interfaz.** La UI muestra un máximo de 50 registros (ver `pendientes.md`). Un conjunto de 800 dejaría más del noventa por ciento invisible en la demo, sin aportar nada verificable.
+**Capacidad real de la interfaz.** La API entrega como máximo 50 documentos por página y la UI solicita páginas sucesivas, mostrando ocho tarjetas por página. Un conjunto de 800 seguiría siendo demasiado grande para revisar y demostrar, aunque ya no quedaría oculto por el límite de una sola llamada.
 
 **Minimización de datos.** Para un proyecto académico que consume datos de terceros bajo los términos de Google, almacenar el conjunto mínimo que demuestra el sistema es una postura más defendible que acumular todo lo alcanzable. Esto se conecta con la sección de postura ética del documento final.
 
@@ -61,10 +61,10 @@ Estos casos salieron de la ejecución real y se documentan sin corregirlos, tal 
 
 | Especialidad | Zona | `keyword_usado` exacto | Resultados guardados | Notas |
 | --- | --- | --- | --- | --- |
-| cardiologia | zona10 | `cardiologia zona10 Ciudad de Guatemala` | | |
-| cardiologia | zona1 | `cardiologia zona1 Ciudad de Guatemala` | | |
-| pediatria | zona10 | `pediatria zona10 Ciudad de Guatemala` | | |
-| pediatria | zona1 | `pediatria zona1 Ciudad de Guatemala` | | |
+| cardiologia | zona10 | `cardiologia zona10 Ciudad de Guatemala` | 15 | HTTP 200; búsqueda devolvió 20 |
+| cardiologia | zona1 | `cardiologia zona1 Ciudad de Guatemala` | 13 | HTTP 200; búsqueda devolvió 13 |
+| pediatria | zona10 | `pediatria zona10 Ciudad de Guatemala` | 18 | HTTP 200; búsqueda devolvió 20 |
+| pediatria | zona1 | `pediatria zona1 Ciudad de Guatemala` | 20 | HTTP 200; búsqueda devolvió 20 |
 
 Ejecuciones descartadas, registradas por transparencia:
 
@@ -82,4 +82,4 @@ Si el directorio necesitara más cobertura, no haría falta tocar código. Basta
 - Especialidades: medicina general, ginecología y obstetricia, dermatología, oftalmología, otorrinolaringología, traumatología y ortopedia, psiquiatría, medicina interna.
 - Zonas con concentración de clínicas privadas: zona 4, zona 9, zona 11, zona 13, zona 14, zona 15.
 
-Antes de ampliar habría que resolver el techo de 50 registros de la interfaz, porque de lo contrario los datos nuevos no serían visibles en la demo.
+Antes de ampliar habría que definir un criterio adicional de revisión y presentación, porque la interfaz puede cargar páginas sucesivas pero una colección de cientos de registros seguiría siendo difícil de validar en la demo.

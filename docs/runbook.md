@@ -250,7 +250,8 @@ Igual que en el emulador, pero en la consola real de Firebase
 (console.firebase.google.com), no en la UI del emulador:
 
 1. Conseguir la IP pública real de quien va a probar, con
-   `curl ifconfig.me` o cualquier página de "what is my ip".
+   `curl.exe -4 https://ifconfig.me` en PowerShell o cualquier página de
+   "what is my ip".
 2. Entrar a Firestore Database en la consola, y antes de crear nada
    confirmar en el selector de bases que se está viendo
    `directorio-medicos-db`, no `(default)`. Si se crea el documento en
@@ -265,7 +266,7 @@ Igual que en el emulador, pero en la consola real de Firebase
 
 ```
 firebase use
-firebase deploy --only functions,firestore:rules,firestore:indexes
+firebase deploy --only "functions,firestore:rules,firestore:indexes"
 ```
 
 `firebase use` sin argumentos debe confirmar el proyecto correcto antes
@@ -289,6 +290,10 @@ Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
   ```
   https://us-central1-<project-id>.cloudfunctions.net/buscarMedicos?keyword=cardiologo&zona=zona10
   ```
+  La función rechaza antes de llamar a Places un `keyword` vacío o una
+  `zona` que no tenga el formato `zona` seguido de uno o más dígitos. No
+  usar valores de prueba como `zona=zona`, porque la validación existe
+  precisamente para evitar costo y datos inválidos.
   Esta sí llama a la Places API real y tiene costo (aprox. $0.017 por
   llamada). No conviene probarla en loop, una vez alcanza para
   confirmar que el deploy funciona. Para poblar el directorio de
@@ -342,7 +347,8 @@ Al terminar, el CLI imprime la URL real de cada función. Para probarlas:
 - [x] Cuota máxima diaria de Places API, evidencia en `chuy_evidence/`
 - [x] Middleware de IP whitelist implementado, con smoke test
       reproducible (`npm run test:allowlist`, ver sección 2.0)
-- [X] Función "hello world" o funciones actuales desplegadas a un
-      proyecto real (pendiente, ver sección 3 antes de intentarlo)
-- [X] `config/ipAllowlist` creado en un proyecto real, no solo probado
+- [x] Funciones actuales desplegadas a un proyecto real
+- [x] `config/ipAllowlist` creado en un proyecto real, no solo probado
       en el emulador
+- [ ] API key de Places configurada y cuatro búsquedas planificadas
+      ejecutadas con sus resultados registrados

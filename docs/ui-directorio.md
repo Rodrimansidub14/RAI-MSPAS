@@ -65,33 +65,25 @@ Ejemplo reducido:
 
 Los campos pueden venir vacíos, como `ubicacion: null` u horarios vacíos. La UI contempla estos casos y no debe asumirse que todo lugar tiene teléfono, sitio web u horario.
 
-### 2.1 Actualizar los 40 registros iniciales sin crear duplicados
+### 2.1 `actualizarMedicosIniciales`: fuera de uso
 
-La Function temporal `actualizarMedicosIniciales` existe para enriquecer los 40 `place_id` iniciales definidos en `functions/src/medicalPlaceData.ts`. Hace una consulta de detalles a Places por cada ID y actualiza los campos nuevos mediante `merge`.
+La migración temporal de los 40 `place_id` iniciales queda documentada como
+histórica, pero no forma parte del flujo final. `buscarMedicos` ya guarda los
+campos enriquecidos en una sola ejecución y es la herramienta que debe usarse
+para poblar proyectos nuevos.
 
-Su comportamiento es intencionalmente limitado:
-
-- solo recorre la lista hardcodeada de 40 IDs iniciales;
-- antes de consultar Places, comprueba si el documento ya existe en la colección `medicos`;
-- si el documento no existe, lo reporta en `no_encontrados` y **no lo crea**;
-- conserva `especialidad`, `zona`, `keyword_usado` y `fecha_recoleccion`;
-- no afecta nuevos médicos obtenidos después con `buscarMedicos`.
-
-Para usarla en un proyecto propio, primero confirmar que esos 40 documentos ya están en Firestore, que `PLACES_API_KEY` está configurada y que la versión de la Function que contiene esta migración está desplegada:
-
-```powershell
-cd C:\ruta\a\RAI-MSPAS
-firebase use <mi-alias>
-firebase deploy --only functions:actualizarMedicosIniciales
-```
-
-Después invocarla una sola vez desde una IP autorizada. En PowerShell se debe incluir `-d ""`, pues el endpoint usa `POST` y Google requiere `Content-Length`:
+El export de `actualizarMedicosIniciales` se retiró del código fuente para que
+los nuevos despliegues solo publiquen `buscarMedicos` y `directorio`. Quitar el
+export no borra automáticamente una Function que ya exista en un proyecto de
+Firebase. Si un proyecto anterior todavía la tiene desplegada, hay que
+retirarla explícitamente después de confirmar que nadie la necesita:
 
 ```powershell
-curl.exe -X POST -d "" "https://us-central1-<project-id>.cloudfunctions.net/actualizarMedicosIniciales?confirmar=actualizar-40"
+firebase functions:delete actualizarMedicosIniciales --region us-central1
 ```
 
-La respuesta indica `actualizados`, `no_encontrados` y `errores`. Ejecutarla otra vez vuelve a consultar Places y puede generar costo, por lo que no debe usarse como parte del flujo normal. Para médicos nuevos se usa `buscarMedicos`, que guarda por `place_id` y no duplica un documento existente.
+Para médicos nuevos se usa `buscarMedicos`, que guarda por `place_id` y evita
+duplicar un documento existente.
 
 ## 3. Preparar y ejecutar la UI localmente
 

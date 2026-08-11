@@ -3,101 +3,133 @@
 ## Documentación técnica final
 
 **Curso:** CC3106 Responsible AI · **Institución:** Universidad del Valle de Guatemala  
-**Stack:** TypeScript, Firebase Functions v2, Firestore, Google Places API (New), React/Vite y Firebase Hosting.
+**Tecnología:** TypeScript, Firebase Functions v2, Firestore, Google Places API (New), React/Vite y Firebase Hosting.
 
-## 1. Propósito y alcance
+## 1. Objetivo y alcance
 
-Nosotros construimos un directorio académico de profesionales y centros médicos de Ciudad de Guatemala. El objetivo es demostrar un flujo controlado para recolectar resultados de Google Places, organizarlos por especialidad y zona, y exponerlos en una interfaz web de consulta.
+El sistema crea un directorio académico de médicos y centros médicos de Ciudad de Guatemala. El sistema recolecta datos de Google Places, los guarda en Firestore y los muestra en una interfaz web.
 
-El proyecto no diagnostica, recomienda ni valida credenciales médicas. La información se presenta como referencia, con fecha y fuente de recolección. El alcance de producción se limita a pruebas finales y demostración.
+El sistema no diagnostica, no recomienda y no valida credenciales médicas. Los datos sirven como referencia. Cada registro conserva su fuente y su fecha de recolección. El alcance actual cubre dos especialidades y dos zonas. Son cuatro combinaciones de búsqueda.
 
-## 2. Arquitectura y flujos
+## 2. Arquitectura
 
-Planteamos dos flujos separados que se encuentran únicamente en Firestore. El flujo interno `buscarMedicos` recibe una especialidad y una zona, consulta Google Places API (New) y guarda los resultados. El flujo público autorizado carga la UI desde Firebase Hosting y consulta `directorio`; esa Function lee exclusivamente lo que ya está en Firestore y nunca expone ni utiliza la clave de Places desde el navegador.
+El sistema tiene dos funciones HTTP. `buscarMedicos` recolecta datos. `directorio` consulta los datos existentes. Las dos funciones usan el mismo middleware de lista de IP permitidas (`allowlist`).
 
 ```mermaid
 flowchart TB
   equipo["Equipo: búsqueda planificada"] --> gate{"IP autorizada?"}
   hosting["Navegador: Firebase Hosting"] --> gate
-  gate -->|"No"| denied["HTTP 403"]
+  gate -->|"No: HTTP 403"| denied["Acceso rechazado"]
   gate -->|"Sí"| buscar["buscarMedicos"]
   gate -->|"Sí"| directorio["directorio"]
   buscar --> places["Google Places API (New)"]
   buscar --> medicos[("Firestore: medicos")]
   directorio --> medicos
-  gate -.->|"consulta allowlist"| config[("config/ipAllowlist")]
+  gate -.->|"lee config/ipAllowlist"| config[("Firestore: config")]
 ```
 
-La base configurada es **`directorio-medicos-db`**. Usamos `place_id` como ID del documento para evitar duplicados. Si un lugar aparece en distintas consultas, se conserva un único documento; la última búsqueda puede actualizar su clasificación y trazabilidad.
+La base de datos tiene el nombre `directorio-medicos-db`. Las reglas de Firestore bloquean el acceso directo desde clientes. Las Functions usan el Admin SDK para leer y escribir los datos.
 
 ## 3. Implementación
 
-`buscarMedicos` construye la consulta `{keyword} {zona} Ciudad de Guatemala`, solicita un máximo de 20 resultados y registra `keyword_usado` y `fecha_recoleccion`. Además de los campos solicitados por el enunciado —nombre, especialidad, dirección, teléfono, sitio web, zona y `place_id`— incorporamos `tipos_google`, `google_maps_url`, `ubicacion`, `fuente`, datos de contacto originales y formateados, horarios y estado del negocio.
+### Recolección
 
-`directorio` implementa `GET /directorio` con los parámetros `page`, `pageSize` (máximo 50), `especialidad` y `zona`. La UI obtiene hasta 50 registros mediante este endpoint y realiza la presentación por páginas de ocho tarjetas. Incluye búsqueda textual, filtros dependientes, modal de detalle, enlaces de contacto y estados de carga, error y acceso denegado.
+`buscarMedicos` recibe `keyword` y `zona`. Construye la consulta:
 
-Para enriquecer los 40 registros iniciales se agregó `actualizarMedicosIniciales`. Esta Function temporal consulta detalles por una lista fija de `place_id`, actualiza únicamente documentos existentes mediante `merge` y no crea registros nuevos.
+```text
+{keyword} {zona} Ciudad de Guatemala
+```
 
-## 4. Postura técnica
+La función solicita hasta 20 resultados por llamada. Rechaza un `keyword` vacío y una zona que no tenga el formato `zona<numero>`. Guarda los campos del enunciado: `nombre`, `especialidad`, `direccion`, `telefono`, `sitio_web`, `zona`, `place_id`, `fecha_recoleccion` y `keyword_usado`. También guarda datos enriquecidos de Places, como ubicación, horarios, estado y tipos de Google.
 
-Nosotros planteamos una arquitectura serverless para evitar administrar servidores y separar claramente responsabilidades. La UI no consulta Google Places ni Firestore de forma directa: la Function `directorio` concentra la lectura, el filtrado y el control de acceso. De esta manera, la clave de Places permanece en el backend y las reglas de Firestore pueden negar el acceso directo desde clientes.
+`place_id` es el ID del documento. Este ID evita duplicados. Si un lugar aparece en varias búsquedas, el documento se conserva una sola vez. La última búsqueda puede cambiar su especialidad, zona y `keyword_usado`.
 
-Elegimos `place_id` como identidad estable en lugar de generar IDs aleatorios, porque permite repetir búsquedas sin multiplicar registros. Usamos emuladores durante el desarrollo, `maxInstances: 10` como límite de escalamiento y Functions sin instancias mínimas reservadas, para controlar costo. También dejamos las fotografías de Places fuera del alcance actual: no son necesarias para la demostración, agregan solicitudes y requieren revisar sus políticas de visualización.
+La función histórica `actualizarMedicosIniciales` ya no forma parte del código ni del despliegue. La recolección actual guarda los campos enriquecidos en una sola llamada.
 
-La paginación por `offset` y la carga de hasta 50 documentos para paginar ocho tarjetas en la interfaz son decisiones suficientes para el volumen de la demo. Si el directorio creciera de forma sostenida, nosotros migraríamos la API a paginación por cursor, agregaríamos índices según consultas reales y separaríamos la clasificación canónica de las coincidencias de búsqueda.
-## 5. Seguridad, operación y costo
+### Consulta e interfaz
 
-Nosotros protegemos cada Function HTTP con el middleware `withIpAllowlist`. Antes de ejecutar la lógica de negocio, el middleware consulta `config/ipAllowlist`; una IP no autorizada recibe HTTP 403. La configuración se probó tanto con el emulador como con el despliegue real desde una red autorizada y otra no autorizada.
+`directorio` implementa `GET /directorio` con estos parámetros:
 
-La clave `PLACES_API_KEY` se conserva en `functions/.env` y no se publica en el repositorio ni en el frontend. Está restringida por API a Places API (New). En Functions Gen2 no configuramos una restricción por IP de salida porque no contamos con una IP estática; añadir una requeriría infraestructura adicional no justificada para el alcance académico.
+- `page` y `pageSize`; `pageSize` tiene un máximo de 50.
+- `especialidad` y `zona` como filtros opcionales.
 
-También configuramos alertas de presupuesto y cuotas diarias de Places API. Trabajamos localmente con emuladores para reducir consultas externas y reservamos el despliegue real para validación y demo. Hosting publica archivos estáticos; las Functions escalan a cero cuando no reciben solicitudes y `buscarMedicos` solo genera uso de Places cuando el equipo lo invoca.
+La consulta usa un índice compuesto para combinar los filtros y ordenar por `nombre`. La UI solicita páginas sucesivas de la API y muestra ocho tarjetas por página. La UI incluye búsqueda textual, filtros, modal de detalle, enlaces de contacto y estados de carga, error y acceso rechazado.
 
-## 6. Evidencia de implementación
+La UI no llama a Places y no lee Firestore directamente. La clave de Places permanece en el backend.
 
-Las Functions y el backend fueron desplegados en `us-central1` y la interfaz se publicó con Firebase Hosting. Cada integrante mantiene su propio proyecto de GCP, por lo que existe un despliegue independiente por persona.
+## 4. Seguridad, operación y costo
 
-Las capturas que respaldan cada requisito del enunciado (alertas de billing, cuota diaria de Places, Functions desplegadas, rechazo 403 de la allowlist, datos reales en Firestore y UI publicada) están recopiladas en [`evidencias.md`](evidencias.md), organizadas por requisito y por integrante. Los archivos originales viven en `evidences/`.
+Cada Function HTTP usa `withIpAllowlist`. El middleware lee `config/ipAllowlist` antes de ejecutar la lógica de negocio. Si la IP no está en `ips`, la respuesta es HTTP 403. El campo `enabled` permite activar o desactivar el control. El middleware compara la IP completa; no acepta rangos CIDR.
 
-## 7. Estrategia de datos y calidad
+La clave `PLACES_API_KEY` vive en `functions/.env`. Este archivo no se publica en Git. La clave está restringida a Places API (New). El frontend nunca recibe la clave.
 
-Nosotros documentamos la campaña de recolección en `docs/estrategia-keywords.md`. El alcance definido es de dos especialidades en dos zonas de Ciudad de Guatemala, cuatro combinaciones en total, que producen más de cincuenta registros únicos.
+El proyecto usa emuladores durante el desarrollo. El despliegue usa Functions Gen2 y limita las instancias máximas a 10. Places API tiene una cuota diaria. El proyecto también tiene alertas de presupuesto al 50% y al 90%. La función `buscarMedicos` solo genera consumo de Places cuando el equipo la invoca. La UI se publica como archivos estáticos en Firebase Hosting.
 
-Ese alcance es una decisión deliberada y no un plan incompleto. Una propuesta inicial más amplia habría generado del orden de ochocientos a mil doscientos registros, un volumen que vuelve imposible la revisión manual de relevancia que pide el enunciado, contradice el control de costo que el propio proyecto establece con cuotas y alertas, y excede por mucho lo que la interfaz puede mostrar. Preferimos un conjunto acotado y revisado sobre uno extenso y sin verificar. El sistema acepta cualquier combinación sin cambios de código, por lo que ampliar la cobertura es una decisión operativa y no un desarrollo pendiente.
+Functions Gen2 no tiene una IP de salida fija por defecto. Por esta razón, la clave de Places no usa una restricción por IP de salida. Una IP fija requeriría VPC Connector y Cloud NAT, con costo adicional no justificado para este proyecto académico.
 
-La trazabilidad se conserva con `fuente`, `keyword_usado`, `fecha_recoleccion` y `actualizado_en`. Los valores ausentes no se infieren: teléfono, sitio web, horario o ubicación pueden quedar vacíos cuando Places no los proporciona. La revisión del conjunto recolectado dejó hallazgos documentados en la estrategia: resultados fuera de Ciudad de Guatemala, un campo `zona` que refleja el parámetro de búsqueda y no la dirección verificada, especialidades cruzadas por la nomenclatura inconsistente de Google Maps, y sitios web que apuntan a redes sociales o directorios externos en lugar de a una clínica. Ninguno de esos casos se corrigió ni se rellenó.
+## 5. Estrategia y calidad de los datos
 
-## 8. Postura ética y límites
+El equipo definió la estrategia antes de ejecutar las búsquedas. El alcance usa estos términos sin tilde:
 
-Nosotros planteamos este sistema como una demostración académica y no como un directorio médico certificador. No inferimos diagnósticos, calidad clínica, disponibilidad, precios, aceptación de seguros ni credenciales profesionales. Una coincidencia en Google Places no equivale a validar a una persona como especialista.
+| Especialidad | Zona | Resultados finales |
+| --- | --- | ---: |
+| cardiologia | zona10 | 15 |
+| cardiologia | zona1 | 13 |
+| pediatria | zona10 | 18 |
+| pediatria | zona1 | 20 |
 
-Mostramos la fuente y la trazabilidad de cada registro, limitamos el acceso mediante allowlist y minimizamos el uso de la API con cuotas, piloto y búsquedas planificadas. En producción se debería añadir un proceso de verificación profesional, política de privacidad, términos de uso y un mecanismo para corregir o retirar información desactualizada.
+Places devolvió hasta 20 resultados en cada llamada. Los conteos finales son menores en algunas combinaciones por la deduplicación con `place_id` y por la clasificación de la última búsqueda.
 
-Google Places impone políticas de visualización, atribución y almacenamiento de sus datos. Por ello, antes de un uso fuera del curso revisaríamos las [políticas de Places API](https://developers.google.com/maps/documentation/places/web-service/policies) y los [términos de Google Maps Platform](https://cloud.google.com/maps-platform/terms), validaríamos la retención permitida y agregaríamos la atribución requerida por Google. El proyecto actual no declara conformidad para un uso comercial o productivo.
+La revisión identificó estas limitaciones:
 
-## 9. Reproducibilidad y despliegue
+- Algunos resultados están fuera de Ciudad de Guatemala.
+- `zona` registra el parámetro usado en la búsqueda. No verifica la zona de la dirección.
+- Google puede devolver una especialidad distinta a la buscada.
+- Algunos registros no tienen teléfono, sitio web, horario o ubicación.
+- Algunos sitios web son redes sociales o directorios externos.
 
-El procedimiento completo de setup, emuladores y Functions está en `docs/runbook.md`. La interfaz, contrato de datos, migración de los 40 registros y despliegue exclusivo de Hosting se documentan en `docs/ui-directorio.md`.
+El sistema no infiere los campos que faltan. Los datos se conservan como los entrega Places.
 
-Para publicar un cambio visual desde la raíz del repositorio se ejecuta `firebase deploy --only hosting`. El predeploy corre automáticamente el lint y build de `web/`; no vuelve a desplegar Functions ni consulta Google Places. Después se valida la UI desde una IP autorizada y se confirma el rechazo desde una red no incluida en la allowlist.
+## 6. Postura ética y límites
 
-## 10. Referencias
+El sistema es una demostración académica. Un resultado de Google Places no confirma que una persona tenga una especialidad médica. El sistema no muestra diagnósticos ni realiza recomendaciones clínicas.
 
-### Documentación del proyecto
+El proyecto limita el acceso con una allowlist, conserva la fuente de los datos y reduce las consultas con un alcance pequeño y cuotas. Para un uso real se necesitarían verificación profesional, política de privacidad, términos de uso y un proceso para corregir o retirar datos.
+
+Antes de usar los datos fuera del curso, el equipo debe revisar las políticas de Places API, las reglas de atribución y los términos de Google Maps Platform. El proyecto no declara conformidad para uso comercial o productivo.
+
+## 7. Verificación y evidencias
+
+El smoke test local se ejecuta con:
+
+```powershell
+cd functions
+npm run test:allowlist
+```
+
+El test debe mostrar un 403 para una IP no autorizada y una respuesta distinta de 403 para una IP autorizada. La prueba real repite el mismo control desde una red autorizada y otra no autorizada.
+
+Las Functions, Firestore y Hosting se desplegaron en la región `us-central1`. Las capturas de billing, cuota de Places, Functions, allowlist, datos reales, Hosting y UI están organizadas en [`evidencias.md`](evidencias.md). Los archivos originales están en `evidences/`.
+
+## 8. Reproducibilidad y despliegue
+
+El procedimiento completo está en [`runbook.md`](runbook.md). Desde la raíz del repositorio, después de confirmar el proyecto correcto, se ejecuta:
+
+```powershell
+firebase deploy --only "functions,firestore:rules,firestore:indexes"
+firebase deploy --only hosting
+```
+
+El predeploy ejecuta lint y build. Antes del despliegue se debe confirmar que existe `config/ipAllowlist` en la base `directorio-medicos-db`. Después se verifica una respuesta 200 desde una IP autorizada y una respuesta 403 desde una IP no autorizada.
+
+## 9. Referencias
 
 - [Instrucciones del proyecto](instrucciones_proy.md)
 - [Runbook de configuración y pruebas](runbook.md)
 - [Arquitectura detallada](arquitectura.md)
 - [Estrategia de keywords](estrategia-keywords.md)
-- [UI, contrato de datos y Hosting](ui-directorio.md)
 - [Evidencias de implementación](evidencias.md)
-
-### Documentación oficial
-
-- [Cloud Functions for Firebase: administrar Functions](https://firebase.google.com/docs/functions/manage-functions)
-- [Firebase Hosting: primeros pasos](https://firebase.google.com/docs/hosting/quickstart)
-- [Precios de Firebase](https://firebase.google.com/pricing)
-- [Precios de Cloud Firestore](https://cloud.google.com/firestore/pricing)
-- [Places API (New): búsqueda de texto](https://developers.google.com/maps/documentation/places/web-service/text-search)
-- [Places API: políticas y atribuciones](https://developers.google.com/maps/documentation/places/web-service/policies)
-- [Términos de Google Maps Platform](https://cloud.google.com/maps-platform/terms)
+- [Cloud Functions for Firebase](https://firebase.google.com/docs/functions/manage-functions)
+- [Firebase Hosting](https://firebase.google.com/docs/hosting/quickstart)
+- [Places API (New)](https://developers.google.com/maps/documentation/places/web-service/text-search)
+- [Políticas de Places API](https://developers.google.com/maps/documentation/places/web-service/policies)

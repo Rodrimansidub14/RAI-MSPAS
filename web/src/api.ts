@@ -21,15 +21,29 @@ interface DirectoryResponse {
 }
 
 export const getDoctors = async (): Promise<Doctor[]> => {
-  const response = await fetch("/api/directorio?page=1&pageSize=50");
+  const pageSize = 50;
+  const doctors: Doctor[] = [];
+  let page = 1;
 
-  if (!response.ok) {
-    const message = response.status === 403 ?
-      "Esta red no está autorizada para ver el directorio." :
-      "No se pudo cargar el directorio. Intenta de nuevo.";
-    throw new Error(message);
+  while (true) {
+    const response = await fetch(
+      `/api/directorio?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      const message = response.status === 403 ?
+        "Esta red no está autorizada para ver el directorio." :
+        "No se pudo cargar el directorio. Intenta de nuevo.";
+      throw new Error(message);
+    }
+
+    const payload = await response.json() as DirectoryResponse;
+    doctors.push(...payload.data);
+
+    if (payload.data.length < pageSize) {
+      return doctors;
+    }
+
+    page++;
   }
-
-  const payload = await response.json() as DirectoryResponse;
-  return payload.data;
 };

@@ -1,6 +1,6 @@
 # Arquitectura del sistema
 
-Dos flujos separados que comparten la misma base de datos, pero nunca se llaman entre sí directamente. Tres Cloud Functions, todas protegidas por el mismo middleware de allowlist.
+Dos flujos separados que comparten la misma base de datos, pero nunca se llaman entre sí directamente. Dos Cloud Functions, ambas protegidas por el mismo middleware de allowlist.
 
 ## Flujo 1: poblar el directorio (lo corre el equipo)
 
@@ -8,7 +8,10 @@ Un integrante llama a `buscarMedicos` con una especialidad y una zona, siguiendo
 
 Nadie más ejecuta este flujo, ni el frontend ni un usuario final. Es una herramienta interna, y esto no depende solo de una convención: `buscarMedicos` **no tiene ruta publicada en el sitio web**, solo se puede invocar por su URL directa de Cloud Functions.
 
-En este mismo flujo vive `actualizarMedicosIniciales`, una migración temporal que enriquece documentos ya existentes para una lista fija de 40 `place_id` definida en `functions/src/medicalPlaceData.ts`. Consulta detalles a Places por cada ID y actualiza con `merge`, sin crear ni borrar registros. Exige método `POST` y el parámetro `?confirmar=actualizar-40` para que no se dispare por accidente desde un navegador.
+La migración temporal de 40 `place_id` que existía en una versión anterior
+queda fuera del flujo final. La recolección actual guarda los campos
+enriquecidos en la misma llamada, por lo que los nuevos despliegues no
+publican un endpoint de migración separado.
 
 ## Flujo 2: consultar el directorio (lo usa la demo o cualquier visitante autorizado)
 
@@ -60,7 +63,6 @@ flowchart TB
 
     subgraph L4["Capa de logica: Cloud Functions"]
         buscarMedicos["buscarMedicos\nescribe"]
-        actualizar["actualizarMedicosIniciales\nenriquece los 40 iniciales"]
         directorio["directorio\nsolo lee"]
     end
 
@@ -78,26 +80,23 @@ flowchart TB
 
     gate -->|"no"| reject["403\nla funcion nunca se ejecuta"]
     gate -->|"si"| buscarMedicos
-    gate -->|"si"| actualizar
     gate -->|"si"| directorio
     gate -.->|"lee para decidir"| configColl
 
     buscarMedicos --> places
-    actualizar --> places
     buscarMedicos -->|"guarda, place_id como ID"| medicos
-    actualizar -->|"merge sobre existentes"| medicos
     directorio -->|"lee, pagina, filtra"| medicos
 ```
 
 ## Notas sobre el diagrama
 
 - `config/ipAllowlist` no es un sistema aparte. Vive en el mismo Firestore que la colección `medicos`, solo que en otra colección que únicamente lee el middleware.
-- El diagrama muestra un solo nodo de middleware por claridad visual, pero en el código son tres instancias independientes, una por función. Comparten el mismo patrón y el mismo documento de configuración, no un servicio central.
-- Solo `buscarMedicos` y `actualizarMedicosIniciales` hablan con Google Places, y por lo tanto son las únicas que generan costo por consulta. `directorio` se puede llamar libremente.
+- El diagrama muestra un solo nodo de middleware por claridad visual, pero en el código son dos instancias independientes, una por función. Comparten el mismo patrón y el mismo documento de configuración, no un servicio central.
+- Solo `buscarMedicos` habla con Google Places y por lo tanto genera costo por consulta. `directorio` se puede llamar libremente.
 - El acceso a Firestore siempre pasa por `getDb()` (`functions/src/firestoreDb.ts`), que apunta explícitamente a la base con nombre `directorio-medicos-db` y no a `(default)`.
 
 ## Limitaciones conocidas
 
-- El frontend hace una sola llamada fija (`/api/directorio?page=1&pageSize=50`) y pagina del lado del cliente. Como `directorio` además limita `pageSize` a 50, la interfaz nunca muestra más de 50 registros aunque Firestore tenga más. Es suficiente para la demo actual, pero deja de serlo si se ejecuta la campaña completa de keywords.
+- El frontend solicita páginas sucesivas de `/api/directorio` con un máximo de 50 documentos por llamada y pagina ocho tarjetas del lado del cliente. Para un crecimiento sostenido del directorio convendría mover filtros y paginación al servidor y cambiar `offset` por cursores.
 - La allowlist compara IPs por igualdad exacta, sin soporte de rangos CIDR. Quien tenga IP dinámica va a necesitar actualizar el documento con cierta frecuencia.
 - El campo `zona` guarda el parámetro de búsqueda, no una zona verificada contra la dirección devuelta por Google. Un resultado puede quedar etiquetado en una zona distinta a la de su dirección real.
