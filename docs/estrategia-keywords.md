@@ -73,8 +73,7 @@ Ejecuciones descartadas, registradas por transparencia:
 | Llamada con `zona=zona` (parámetro incompleto por error de tecleo) | Guardó registros con una zona inválida. La colección se borró por completo y se repobló con las cuatro combinaciones de la tabla de alcance. |
 | Búsquedas iniciales con `keyword=cardiologo` y una versión anterior del código | Guardaron documentos con ID aleatorio y campos incompletos. Se eliminaron al repoblar. |
 
-Aprobación del alcance por el equipo: Ricardo Chuy, Rodrigo Mansilla y
-SergioAle210 (identidades registradas en el historial de Git).
+Aprobación del alcance por el equipo
 
 ## Cómo escalaría
 
