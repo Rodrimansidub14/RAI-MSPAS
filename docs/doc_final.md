@@ -4,6 +4,7 @@
 
 **Curso:** CC3106 Responsible AI · **Institución:** Universidad del Valle de Guatemala  
 **Tecnología:** TypeScript, Firebase Functions v2, Firestore, Google Places API (New), React/Vite y Firebase Hosting.
+**Estudiantes:** Sergio Orellana, Rodrigo Mansilla, Ricardo Chuy
 
 ## 1. Objetivo y alcance
 
@@ -17,18 +18,48 @@ El sistema tiene dos funciones HTTP. `buscarMedicos` recolecta datos. `directori
 
 ```mermaid
 flowchart TB
-  equipo["Equipo: búsqueda planificada"] --> gate{"IP autorizada?"}
-  hosting["Navegador: Firebase Hosting"] --> gate
-  gate -->|"No: HTTP 403"| denied["Acceso rechazado"]
-  gate -->|"Sí"| buscar["buscarMedicos"]
-  gate -->|"Sí"| directorio["directorio"]
-  buscar --> places["Google Places API (New)"]
-  buscar --> medicos[("Firestore: medicos")]
-  directorio --> medicos
-  gate -.->|"lee config/ipAllowlist"| config[("Firestore: config")]
+  denied["HTTP 403\nse detiene la solicitud"]
+
+  subgraph consulta["1. Consulta del directorio: flujo de la UI"]
+    navegador["Visitante autorizado"]
+    ui["Firebase Hosting\nReact/Vite"]
+    api["GET /api/directorio\nHosting lo reescribe"]
+    checkConsulta{"¿IP permitida?"}
+    directorio["directorio\nlee, filtra y pagina"]
+
+    navegador --> ui --> api --> checkConsulta
+    checkConsulta -->|"No"| denied
+    checkConsulta -->|"Sí"| directorio
+  end
+
+  subgraph recoleccion["2. Recolección: flujo interno del equipo"]
+    equipo["Integrante del equipo"]
+    solicitud["URL directa: buscarMedicos\nkeyword y zona"]
+    checkBusqueda{"¿IP permitida?"}
+    buscar["buscarMedicos\nconsulta y guarda"]
+
+    equipo --> solicitud --> checkBusqueda
+    checkBusqueda -->|"No"| denied
+    checkBusqueda -->|"Sí"| buscar
+  end
+
+  subgraph firestore["Firestore · directorio-medicos-db"]
+    config[("config/ipAllowlist")]
+    medicos[("medicos\nID = place_id")]
+  end
+
+  places["Google Places API (New)"]
+
+  config -.->|"configura allowlist"| checkConsulta
+  config -.->|"configura allowlist"| checkBusqueda
+  directorio -->|"lee registros"| medicos
+  buscar -->|"consulta, máx. 20 resultados"| places
+  buscar -->|"guarda / actualiza por place_id"| medicos
 ```
 
-La base de datos tiene el nombre `directorio-medicos-db`. Las reglas de Firestore bloquean el acceso directo desde clientes. Las Functions usan el Admin SDK para leer y escribir los datos.
+La ruta de escritura y la de lectura están separadas deliberadamente. Solo el equipo invoca `buscarMedicos`, siguiendo las keywords aprobadas; la interfaz no expone esa ruta ni llama a Places. En cambio, el navegador pide `/api/directorio` al mismo dominio de Hosting. El *rewrite* de Hosting lo entrega a `directorio`, por lo que no hace falta CORS ni incluir una URL de Function en el frontend.
+
+Los dos rombos representan el mismo patrón de middleware aplicado de forma independiente a cada Function. Ambos usan `config/ipAllowlist`; si la IP no está en `ips`, devuelven 403 y no llegan a la lógica de negocio, Places ni la colección `medicos`. La base se llama `directorio-medicos-db`, las reglas bloquean todo acceso directo de clientes y las Functions usan Admin SDK.
 
 ## 3. Implementación
 
@@ -44,7 +75,18 @@ La función solicita hasta 20 resultados por llamada. Rechaza un `keyword` vací
 
 `place_id` es el ID del documento. Este ID evita duplicados. Si un lugar aparece en varias búsquedas, el documento se conserva una sola vez. La última búsqueda puede cambiar su especialidad, zona y `keyword_usado`.
 
-La función histórica `actualizarMedicosIniciales` ya no forma parte del código ni del despliegue. La recolección actual guarda los campos enriquecidos en una sola llamada.
+### Modelo de datos y trazabilidad
+
+Cada documento de `medicos` conserva la información necesaria para interpretar su origen y no presentar inferencias como hechos:
+
+| Campo | Origen o regla | Propósito |
+| --- | --- | --- |
+| `place_id` | Google Places; también es el ID del documento | Identificador estable y deduplicación. |
+| `nombre`, `direccion`, `telefono`, `sitio_web` | Respuesta de Places | Datos de contacto; pueden estar vacíos. |
+| `especialidad`, `zona` | Parámetros de la búsqueda | Clasificación operacional, no credencial médica ni zona verificada. |
+| `keyword_usado` | Consulta construida por la Function | Permite repetir y auditar la recolección. |
+| `fecha_recoleccion` | Timestamp del servidor | Indica cuándo se obtuvo o actualizó el registro. |
+| ubicación, horarios, estado y tipos | Respuesta de Places | Contexto adicional para la interfaz; no se infiere ni corrige. |
 
 ### Consulta e interfaz
 
@@ -53,15 +95,24 @@ La función histórica `actualizarMedicosIniciales` ya no forma parte del códig
 - `page` y `pageSize`; `pageSize` tiene un máximo de 50.
 - `especialidad` y `zona` como filtros opcionales.
 
-La consulta usa un índice compuesto para combinar los filtros y ordenar por `nombre`. La UI solicita páginas sucesivas de la API y muestra ocho tarjetas por página. La UI incluye búsqueda textual, filtros, modal de detalle, enlaces de contacto y estados de carga, error y acceso rechazado.
+La consulta usa un índice compuesto para combinar los filtros y ordenar por `nombre`. La API puede recibir filtros y páginas en el servidor. Para mantener la demo simple, la UI actual descarga el directorio completo en bloques de hasta 50 documentos y después realiza la búsqueda textual, los filtros y la paginación visual de ocho tarjetas en el navegador. La UI incluye tarjetas por especialidad, modal de detalle, enlaces de contacto y estados de carga, error y acceso rechazado.
 
-La UI no llama a Places y no lee Firestore directamente. La clave de Places permanece en el backend.
+La UI no llama a Places y no lee Firestore directamente. Solo hace `fetch` a `/api/directorio`; Firebase Hosting reescribe esa ruta a la Function `directorio`, por lo que para el navegador ambas están en el mismo origen y no se configura CORS. La clave de Places permanece en el backend.
+
+### Contrato de la API
+
+| Endpoint | Uso | Parámetros | Respuestas principales |
+| --- | --- | --- | --- |
+| `GET /buscarMedicos` | Herramienta interna de recolección | `keyword` no vacío; `zona` con formato `zona<numero>` | `200` con el número guardado; `400` si los parámetros son inválidos; `403` si la IP no está autorizada; `500` ante un error de Places. |
+| `GET /directorio` | Consulta de la UI | `page` (desde 1), `pageSize` (máximo 50), `especialidad` y `zona` opcionales | `200` con `{ page, pageSize, total, data }`; `403` por allowlist; `500` por error de consulta. |
+
+En la implementación actual, `total` representa la cantidad de documentos devueltos en esa página, no el total global de coincidencias. La UI itera páginas de hasta 50 registros y aplica su búsqueda textual, filtros y paginación visual de ocho tarjetas en el navegador. Para un directorio mucho mayor, la mejora prioritaria sería mover esos filtros al servidor, calcular un total independiente y usar cursores en vez de `offset`.
 
 ## 4. Seguridad, operación y costo
 
 Cada Function HTTP usa `withIpAllowlist`. El middleware lee `config/ipAllowlist` antes de ejecutar la lógica de negocio. Si la IP no está en `ips`, la respuesta es HTTP 403. El campo `enabled` permite activar o desactivar el control. El middleware compara la IP completa; no acepta rangos CIDR.
 
-La clave `PLACES_API_KEY` vive en `functions/.env`. Este archivo no se publica en Git. La clave está restringida a Places API (New). El frontend nunca recibe la clave.
+La clave `PLACES_API_KEY` vive en `functions/.env`. Este archivo no se publica en Git. La clave está restringida a Places API (New). El frontend nunca recibe la clave. Si el documento de allowlist no existe o Firestore no puede leerse, el middleware usa `IPS_AUTORIZADAS` como respaldo; en condiciones normales la configuración vive en Firestore para poder actualizar IPs sin volver a desplegar.
 
 El proyecto usa emuladores durante el desarrollo. El despliegue usa Functions Gen2 y limita las instancias máximas a 10. Places API tiene una cuota diaria. El proyecto también tiene alertas de presupuesto al 50% y al 90%. La función `buscarMedicos` solo genera consumo de Places cuando el equipo la invoca. La UI se publica como archivos estáticos en Firebase Hosting.
 
@@ -109,7 +160,7 @@ npm run test:allowlist
 
 El test debe mostrar un 403 para una IP no autorizada y una respuesta distinta de 403 para una IP autorizada. La prueba real repite el mismo control desde una red autorizada y otra no autorizada.
 
-Las Functions, Firestore y Hosting se desplegaron en la región `us-central1`. Las capturas de billing, cuota de Places, Functions, allowlist, datos reales, Hosting y UI están organizadas en [`evidencias.md`](evidencias.md). Los archivos originales están en `evidences/`.
+Las Functions se despliegan en `us-central1`; Firestore usa la ubicación multirregional `nam5` y Hosting sirve la interfaz estática. Las capturas de billing, cuota de Places, Functions, allowlist, datos reales, Hosting y UI están organizadas en [`evidencias.md`](evidencias.md). Los archivos originales están en `evidences/`.
 
 ## 8. Reproducibilidad y despliegue
 
@@ -124,6 +175,8 @@ El predeploy ejecuta lint y build. Antes del despliegue se debe confirmar que ex
 
 ## 9. Referencias
 
+- [Repositorio del proyecto en GitHub](https://github.com/Rodrimansidub14/RAI-MSPAS)
+- [Enlaces para demo, Firebase y GCP](links.md)
 - [Instrucciones del proyecto](instrucciones_proy.md)
 - [Runbook de configuración y pruebas](runbook.md)
 - [Arquitectura detallada](arquitectura.md)
