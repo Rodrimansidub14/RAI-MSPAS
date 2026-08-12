@@ -17,3 +17,16 @@ El diagrama de arquitectura está en [`docs/arquitectura.md`](docs/arquitectura.
 ## Stack
 
 TypeScript, Firebase Functions v2, Firestore, Google Places API, Firebase Hosting para la UI. Desarrollo local con el emulador de Firebase; producción solo para pruebas finales y la demo.
+
+Para pruebas locales
+Iniciar Firestone:
+```plain text
+cd C:\UVG\RAI-MSPAS\functions
+npm run serve
+```
+
+Iniciar la UI
+```plain text
+cd C:\UVG\RAI-MSPAS\web
+npm run dev
+```
