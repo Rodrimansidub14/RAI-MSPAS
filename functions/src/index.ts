@@ -3,7 +3,7 @@ import {onRequest} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
 import {initializeApp} from "firebase-admin/app";
 import {FieldValue} from "firebase-admin/firestore";
-import axios from "axios";
+import axios, {isAxiosError} from "axios";
 import {withIpAllowlist} from "./middleware/ipAllowlist";
 import {getDb} from "./firestoreDb";
 import {
@@ -41,6 +41,14 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
     const apiKey = process.env.PLACES_API_KEY;
     const query = `${keyword} ${zona} Ciudad de Guatemala`;
 
+    logger.info("Inicio de recolección en Places", {
+      operation: "buscarMedicos",
+      keyword,
+      zona,
+      query,
+      pageSize: 20,
+    });
+
     const response = await axios.post<{places?: PlaceDetails[]}>(
       "https://places.googleapis.com/v1/places:searchText",
       {textQuery: query, pageSize: 20},
@@ -76,12 +84,24 @@ export const buscarMedicos = onRequest(withIpAllowlist(async (req, res) => {
 
     await batch.commit();
 
+    logger.info("Recolección completada", {
+      operation: "buscarMedicos",
+      keyword,
+      zona,
+      resultadosRecibidos: places.length,
+      registrosGuardados: guardados,
+    });
+
     res.json({
       mensaje: `${guardados} médicos guardados en Firestore`,
       total: guardados,
     });
   } catch (error) {
-    logger.error("Error buscando médicos", error);
+    logger.error("Error buscando médicos", {
+      operation: "buscarMedicos",
+      message: error instanceof Error ? error.message : String(error),
+      status: isAxiosError(error) ? error.response?.status : undefined,
+    });
     res.status(500).json({error: "Error al consultar Places API"});
   }
 }));
@@ -106,9 +126,21 @@ export const directorio = onRequest(withIpAllowlist(async (req, res) => {
 
     const data = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
 
+    logger.info("Consulta de directorio completada", {
+      operation: "directorio",
+      page,
+      pageSize,
+      especialidad: typeof especialidad === "string" ? especialidad : undefined,
+      zona: typeof zona === "string" ? zona : undefined,
+      registrosDevueltos: data.length,
+    });
+
     res.json({page, pageSize, total: data.length, data});
   } catch (error) {
-    logger.error("Error en directorio", error);
+    logger.error("Error en directorio", {
+      operation: "directorio",
+      message: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({error: "Error al consultar el directorio"});
   }
 }));
