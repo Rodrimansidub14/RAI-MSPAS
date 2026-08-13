@@ -75,3 +75,12 @@ Estos funcionan únicamente cuando el emulador está activo con `npm run serve` 
 | Firestore REST local | [http://127.0.0.1:8080](http://127.0.0.1:8080) |
 
 > Importante: no abrir repetidamente `buscarMedicos` en producción. Cada llamada consulta Google Places, puede consumir cuota y generar costo. Para demostrar la aplicación, basta con la UI y `directorio`; para demostrar la recolección, es preferible usar la evidencia ya guardada o hacer una única llamada planificada.
+
+
+### Guion mínimo para la demo en vivo
+
+1. Mostrar la UI publicada y una consulta por especialidad o zona; confirmar que los resultados vienen de `/api/directorio`.
+2. Abrir un registro y señalar `fecha_recoleccion` y el enlace de contacto como datos de referencia, no como validación clínica.
+3. Mostrar la configuración `config/ipAllowlist` y ejecutar el smoke test: una IP no autorizada recibe 403 antes de consultar datos.
+4. Mostrar una invocación planificada de `buscarMedicos` o su evidencia, el límite de 20 resultados y el documento guardado con `place_id` como ID.
+5. Cerrar con las evidencias de cuota, presupuesto y las limitaciones de calidad de Places.
