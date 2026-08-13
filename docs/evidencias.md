@@ -114,4 +114,3 @@ Cada integrante despliega en su propio proyecto, así que las capturas se duplic
 <img src="../evidences/mansilla_evidence/MANSILLA_DEPLOY.png" alt="Primer despliegue verificado" width="520" />
 
 Las evidencias de los tres integrantes están incorporadas. Cada grupo corresponde a una infraestructura Firebase/GCP independiente.
-
