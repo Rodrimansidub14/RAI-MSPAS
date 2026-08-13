@@ -112,7 +112,9 @@ https://us-central1-<project-id>.cloudfunctions.net/buscarMedicos?keyword=cardio
 ├── docs/
 │   ├── arquitectura.md               # diagrama y explicación detallada
 │   ├── runbook.md                    # setup, emulador y despliegue
-│   └── estrategia-keywords.md        # búsquedas planificadas
+│   ├── estrategia-keywords.md        # búsquedas planificadas
+│   ├── links.md                       # enlaces de demo, consolas y logs
+│   └── instrucciones_proy.md          # enunciado y requisitos del proyecto
 ├── evidences/                        # capturas de verificaciones y despliegues
 ├── firebase.json                     # Functions, Firestore, Hosting y emuladores
 └── firestore.rules                   # acceso directo bloqueado
@@ -179,5 +181,7 @@ Los hooks de `firebase.json` ejecutan lint y build antes de publicar Functions y
 - [Arquitectura detallada](docs/arquitectura.md)
 - [Runbook de configuración, pruebas y despliegue](docs/runbook.md)
 - [Estrategia de keywords](docs/estrategia-keywords.md)
-- [Documento técnico final](docs/doc_final.md)
+- [Enlaces de demo, Firebase, GCP y logs](docs/links.md)
+- [Instrucciones y requisitos del proyecto](docs/instrucciones_proy.md)
+- [Documento técnico final (PDF)](<docs/Proyecto 1 - Directorio de Médicos.pdf>)
 - [Evidencias de implementación](docs/evidencias.md)
