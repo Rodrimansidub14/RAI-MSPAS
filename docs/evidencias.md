@@ -81,8 +81,37 @@ Cada integrante despliega en su propio proyecto, así que las capturas se duplic
 
 <img src="../evidences/sergio_evidence/PRUEBA_DEPLOY_1.png" alt="Primer despliegue verificado" width="520" />
 
-## Pendiente
+## Rodrigo Mansilla, proyecto `project-312d82e4-6f8b-42cf-824`
 
-Falta la carpeta de evidencias del tercer integrante. Cuando la agregue, conviene seguir la misma convención de nombres (`NOMBRE_BUDGET_EVIDENCE`, `NOMBRE_FUNCTIONS`, y así) para que la tabla de requisitos siga siendo legible de un vistazo.
+**Alertas de billing al 50% y 90%**
 
-Nota menor de consistencia: el archivo de Sergio se llama `SERGIO_FIRESTONE_DATA_REAL.png` (dice "FIRESTONE" en vez de "FIRESTORE") y su cuota es `QUOTE` en lugar de `QUOTA`. Se dejaron con el nombre original para no romper las referencias existentes.
+<img src="../evidences/mansilla_evidence/MANSILLA_BUDGET_EVIDENCE.png" alt="Alertas de presupuesto configuradas en GCP" width="520" />
+
+**Cuota diaria de Places API**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_QUOTA.png" alt="Cuota máxima diaria de Places API" width="520" />
+
+**Cloud Functions desplegadas**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_FUNCTIONS.png" alt="Cloud Functions desplegadas" width="520" />
+
+**Allowlist rechazando una IP no autorizada**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_ALLOWLIST.jpeg" alt="Respuesta 403 desde una red no autorizada" width="520" />
+
+**Datos reales en Firestore**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_FIRESTORE_REAL_DATA.png" alt="Colección medicos con datos reales" width="520" />
+
+**Hosting y UI publicada**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_HOSTING.png" alt="Firebase Hosting desplegado" width="520" />
+
+<img src="../evidences/mansilla_evidence/MANSILLA_WEB.png" alt="Interfaz web publicada" width="520" />
+
+**Primer despliegue**
+
+<img src="../evidences/mansilla_evidence/MANSILLA_DEPLOY.png" alt="Primer despliegue verificado" width="520" />
+
+Las evidencias de los tres integrantes están incorporadas. Cada grupo corresponde a una infraestructura Firebase/GCP independiente.
+
