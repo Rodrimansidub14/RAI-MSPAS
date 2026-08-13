@@ -18,43 +18,58 @@ El sistema tiene dos funciones HTTP. `buscarMedicos` recolecta datos. `directori
 
 ```mermaid
 flowchart TB
-  denied["HTTP 403\nse detiene la solicitud"]
-
-  subgraph consulta["1. Consulta del directorio: flujo de la UI"]
-    navegador["Visitante autorizado"]
-    ui["Firebase Hosting\nReact/Vite"]
-    api["GET /api/directorio\nHosting lo reescribe"]
-    checkConsulta{"¿IP permitida?"}
-    directorio["directorio\nlee, filtra y pagina"]
-
-    navegador --> ui --> api --> checkConsulta
-    checkConsulta -->|"No"| denied
-    checkConsulta -->|"Sí"| directorio
+  subgraph clientes["1. Clientes"]
+    equipo["Equipo de búsqueda"]
+    navegador["Navegador"]
   end
 
-  subgraph recoleccion["2. Recolección: flujo interno del equipo"]
-    equipo["Integrante del equipo"]
-    solicitud["URL directa: buscarMedicos\nkeyword y zona"]
-    checkBusqueda{"¿IP permitida?"}
-    buscar["buscarMedicos\nconsulta y guarda"]
-
-    equipo --> solicitud --> checkBusqueda
-    checkBusqueda -->|"No"| denied
-    checkBusqueda -->|"Sí"| buscar
+  subgraph acceso["2. Acceso y seguridad"]
+    hosting["Firebase Hosting\nUI + rewrite"]
+    allowlist["IP Allowlist\n(en cada función)"]
+    denied["HTTP 403"]
   end
 
-  subgraph firestore["Firestore · directorio-medicos-db"]
-    config[("config/ipAllowlist")]
-    medicos[("medicos\nID = place_id")]
+  subgraph logica["3. Lógica"]
+    buscar["buscarMedicos"]
+    directorio["directorio"]
   end
 
-  places["Google Places API (New)"]
+  subgraph datos["4. Datos y servicios"]
+    firestore[("Firestore\nmedicos + config/ipAllowlist")]
+    places["Google Places API"]
+  end
 
-  config -.->|"configura allowlist"| checkConsulta
-  config -.->|"configura allowlist"| checkBusqueda
-  directorio -->|"lee registros"| medicos
-  buscar -->|"consulta, máx. 20 resultados"| places
-  buscar -->|"guarda / actualiza por place_id"| medicos
+  equipo --> allowlist
+  navegador --> hosting --> allowlist
+
+  allowlist -->|No| denied
+  allowlist -->|Sí| buscar
+  allowlist -->|Sí| directorio
+
+  buscar --> places
+  buscar --> firestore
+  directorio --> firestore
+  allowlist -.-> firestore
+
+  classDef client fill:#E8F0FE,stroke:#1A73E8,color:#174EA6
+  classDef access fill:#FEF7E0,stroke:#F9AB00,color:#8A4B00
+  classDef logic fill:#F3E8FD,stroke:#9334E6,color:#681DA8
+  classDef data fill:#E8EAED,stroke:#5F6368,color:#202124
+  classDef external fill:#FCE8E6,stroke:#D93025,color:#A50E0E
+  classDef error fill:#FCE8E6,stroke:#D93025,color:#A50E0E
+
+  class equipo,navegador client
+  class hosting,allowlist access
+  class buscar,directorio logic
+  class firestore data
+  class places external
+  class denied error
+
+  style clientes fill:#F8FBFF,stroke:#1A73E8,stroke-width:2px
+  style acceso fill:#FFFDF5,stroke:#F9AB00,stroke-width:2px
+  style logica fill:#FCF8FF,stroke:#9334E6,stroke-width:2px
+  style datos fill:#F8F9FA,stroke:#5F6368,stroke-width:2px
+
 ```
 
 La ruta de escritura y la de lectura están separadas deliberadamente. Solo el equipo invoca `buscarMedicos`, siguiendo las keywords aprobadas; la interfaz no expone esa ruta ni llama a Places. En cambio, el navegador pide `/api/directorio` al mismo dominio de Hosting. El *rewrite* de Hosting lo entrega a `directorio`, por lo que no hace falta CORS ni incluir una URL de Function en el frontend.
