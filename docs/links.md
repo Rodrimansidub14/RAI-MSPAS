@@ -28,8 +28,12 @@ Esta guía reúne los enlaces que el equipo puede abrir durante la demo o ante p
 | Firestore: médicos | [colección `medicos`](https://console.firebase.google.com/project/directorio-medicos-sergio/firestore/databases/directorio-medicos-db/data/~2Fmedicos) | Datos reales y `place_id` como ID del documento. |
 | Firestore: allowlist | [`config/ipAllowlist`](https://console.firebase.google.com/project/directorio-medicos-sergio/firestore/databases/directorio-medicos-db/data/~2Fconfig~2FipAllowlist) | IPs autorizadas y el campo `enabled`. |
 | Functions | [Cloud Functions](https://console.cloud.google.com/functions/list?project=directorio-medicos-sergio) | Estado de `buscarMedicos` y `directorio`. |
+| Logs de las Functions | [Cloud Logging](https://console.cloud.google.com/logs/query?project=directorio-medicos-sergio) | Explorador general de logs. |
+| Payload de `buscarMedicos` | [Logs filtrados de recolección](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22buscarMedicos%22?project=directorio-medicos-sergio) | Abre los registros de `keyword`, `zona`, consulta, resultados recibidos y guardados. |
+| Páginas servidas por `directorio` | [Logs filtrados de consulta](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22directorio%22?project=directorio-medicos-sergio) | Debe mostrar las páginas 1, 2 y 3 con 50, 50 y 4 registros si existen 104 médicos. |
 | Presupuesto | [Budgets & alerts](https://console.cloud.google.com/billing/budgets?project=directorio-medicos-sergio) | Alertas configuradas al 50% y 90%. |
 | Cuota de Places | [Places API quotas](https://console.cloud.google.com/apis/api/places.googleapis.com/quotas?project=directorio-medicos-sergio) | Límite diario de llamadas a Places API (New). |
+| Métricas de Places | [Places API metrics](https://console.cloud.google.com/apis/api/places.googleapis.com/metrics?project=directorio-medicos-sergio) | Cantidad de solicitudes, errores y latencia de Google Places; no expone el payload completo. |
 | API y credenciales | [APIs & Services](https://console.cloud.google.com/apis/dashboard?project=directorio-medicos-sergio) | Confirmar que Places API (New) está habilitada y la key restringida. |
 
 ## Ricardo Chuy — `resp-ai`
@@ -44,8 +48,12 @@ Esta guía reúne los enlaces que el equipo puede abrir durante la demo o ante p
 | Firestore: médicos | [colección `medicos`](https://console.firebase.google.com/project/resp-ai/firestore/databases/directorio-medicos-db/data/~2Fmedicos) | Datos reales y `place_id` como ID del documento. |
 | Firestore: allowlist | [`config/ipAllowlist`](https://console.firebase.google.com/project/resp-ai/firestore/databases/directorio-medicos-db/data/~2Fconfig~2FipAllowlist) | IPs autorizadas y el campo `enabled`. |
 | Functions | [Cloud Functions](https://console.cloud.google.com/functions/list?project=resp-ai) | Estado de `buscarMedicos` y `directorio`. |
+| Logs de las Functions | [Cloud Logging](https://console.cloud.google.com/logs/query?project=resp-ai) | Explorador general de logs. |
+| Payload de `buscarMedicos` | [Logs filtrados de recolección](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22buscarMedicos%22?project=resp-ai) | Abre los registros de `keyword`, `zona`, consulta, resultados recibidos y guardados. |
+| Páginas servidas por `directorio` | [Logs filtrados de consulta](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22directorio%22?project=resp-ai) | Debe mostrar las páginas 1, 2 y 3 con 50, 50 y 4 registros si existen 104 médicos. |
 | Presupuesto | [Budgets & alerts](https://console.cloud.google.com/billing/budgets?project=resp-ai) | Alertas configuradas al 50% y 90%. |
 | Cuota de Places | [Places API quotas](https://console.cloud.google.com/apis/api/places.googleapis.com/quotas?project=resp-ai) | Límite diario de llamadas a Places API (New). |
+| Métricas de Places | [Places API metrics](https://console.cloud.google.com/apis/api/places.googleapis.com/metrics?project=resp-ai) | Cantidad de solicitudes, errores y latencia de Google Places; no expone el payload completo. |
 | API y credenciales | [APIs & Services](https://console.cloud.google.com/apis/dashboard?project=resp-ai) | Confirmar que Places API (New) está habilitada y la key restringida. |
 
 ## Rodrigo Mansilla — `project-312d82e4-6f8b-42cf-824`
@@ -60,8 +68,12 @@ Esta guía reúne los enlaces que el equipo puede abrir durante la demo o ante p
 | Firestore: médicos | [colección `medicos`](https://console.firebase.google.com/project/project-312d82e4-6f8b-42cf-824/firestore/databases/directorio-medicos-db/data/~2Fmedicos) | Datos reales y `place_id` como ID del documento. |
 | Firestore: allowlist | [`config/ipAllowlist`](https://console.firebase.google.com/project/project-312d82e4-6f8b-42cf-824/firestore/databases/directorio-medicos-db/data/~2Fconfig~2FipAllowlist) | IPs autorizadas y el campo `enabled`. |
 | Functions | [Cloud Functions](https://console.cloud.google.com/functions/list?project=project-312d82e4-6f8b-42cf-824) | Estado de `buscarMedicos` y `directorio`. |
+| Logs de las Functions | [Cloud Logging](https://console.cloud.google.com/logs/query?project=project-312d82e4-6f8b-42cf-824) | Explorador general de logs. |
+| Payload de `buscarMedicos` | [Logs filtrados de recolección](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22buscarMedicos%22?project=project-312d82e4-6f8b-42cf-824) | Abre los registros de `keyword`, `zona`, consulta, resultados recibidos y guardados. |
+| Páginas servidas por `directorio` | [Logs filtrados de consulta](https://console.cloud.google.com/logs/query;query=jsonPayload.operation%3D%22directorio%22?project=project-312d82e4-6f8b-42cf-824) | Debe mostrar las páginas 1, 2 y 3 con 50, 50 y 4 registros si existen 104 médicos. |
 | Presupuesto | [Budgets & alerts](https://console.cloud.google.com/billing/budgets?project=project-312d82e4-6f8b-42cf-824) | Alertas configuradas al 50% y 90%. |
 | Cuota de Places | [Places API quotas](https://console.cloud.google.com/apis/api/places.googleapis.com/quotas?project=project-312d82e4-6f8b-42cf-824) | Límite diario de llamadas a Places API (New). |
+| Métricas de Places | [Places API metrics](https://console.cloud.google.com/apis/api/places.googleapis.com/metrics?project=project-312d82e4-6f8b-42cf-824) | Cantidad de solicitudes, errores y latencia de Google Places; no expone el payload completo. |
 | API y credenciales | [APIs & Services](https://console.cloud.google.com/apis/dashboard?project=project-312d82e4-6f8b-42cf-824) | Confirmar que Places API (New) está habilitada y la key restringida. |
 
 ## Enlaces locales para ensayar sin costo
@@ -75,6 +87,8 @@ Estos funcionan únicamente cuando el emulador está activo con `npm run serve` 
 | Firestore REST local | [http://127.0.0.1:8080](http://127.0.0.1:8080) |
 
 > Importante: no abrir repetidamente `buscarMedicos` en producción. Cada llamada consulta Google Places, puede consumir cuota y generar costo. Para demostrar la aplicación, basta con la UI y `directorio`; para demostrar la recolección, es preferible usar la evidencia ya guardada o hacer una única llamada planificada.
+
+> Los logs estructurados aparecen después de desplegar la versión actual de Functions. Cloud Logging muestra el resumen que registra nuestra Function; Google Places muestra métricas de uso, pero no el cuerpo completo de cada solicitud.
 
 
 ### Guion mínimo para la demo en vivo
